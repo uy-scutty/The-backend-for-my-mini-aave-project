@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const service = require("../services/aaveService");
+const Transaction = require("../models/transaction");
 
 // deposit route
 router.post("/deposit", async (req, res) => {
@@ -10,7 +11,7 @@ router.post("/deposit", async (req, res) => {
     const txHash = await service.deposit(amount, asset);
     res.json({ success: true, txHash });
   } catch (err) {
-    res.json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -22,7 +23,7 @@ router.post("/borrow", async (req, res) => {
     const txHash = await service.borrow(asset, amount);
     res.json({ success: true, txHash });
   } catch (err) {
-    res.json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -35,7 +36,7 @@ router.get("/user/:address/:asset", async (req, res) => {
     const data = await service.getUserData(address, asset);
     res.json(data);
   } catch (err) {
-    res.json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

@@ -6,7 +6,7 @@ const transactionSchema = new mongoose.Schema({
   asset: String,
   amount: String,
   type: String,
-  txHash: String,
+  txHash: { type: String, unique: true },
   timestamp: Number,
 });
 
