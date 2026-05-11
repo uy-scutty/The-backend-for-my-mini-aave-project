@@ -1,74 +1,82 @@
 const contract = require("../config/contract");
 const Transaction = require("../models/transaction");
+const UserPosition = require("../models/userPosition");
 
+// Simple helper function
+async function saveTransaction(event, type, extra = {}) {
+  try {
+    const { user, asset, amount } = event.args;
+
+    await Transaction.create({
+      user,
+      asset,
+      amount: amount.toString(),
+      type,
+      txHash: event.transactionHash || event.log?.transactionHash,
+      timestamp: Date.now(),
+      ...extra,
+    });
+
+    console.log(`✅ ${type} saved`);
+  } catch (error) {
+    if (error.code === 11000) {
+      console.log("Duplicate skipped");
+    } else {
+      console.error(error?.error);
+    }
+  }
+}
+
+async function updateUserDebtStatus(userAddress, hasDebt, debtAsset) {
+  try {
+    await UserPosition.findOneAndUpdate(
+      { userAddress: userAddress.toLowerCase() },
+      { hasActiveDebt: hasDebt, debtAsset: debtAsset, lastChecked: Date.now() },
+      { upsert: true },
+    );
+  } catch (error) {
+    console.error("Error updating user debt status: ", error.message);
+  }
+}
+
+// Main function
 function startListener() {
-  contract.on("Deposited", async (user, asset, amount, event) => {
-    console.log("Deposit detected");
+  console.log("Starting event listener...");
 
-    await Transaction.create({
-      user,
-      asset,
-      amount: amount.toString(),
-      type: "deposit",
-      txHash: event.log.transactionHash,
-      timestamp: Date.now(),
-    });
+  // Deposit
+  contract.on("Deposited", (user, asset, amount, event) => {
+    saveTransaction(event, "deposit");
   });
 
-  contract.on("Withdrawn", async (user, asset, amount, event) => {
-    console.log("Withdraw detected");
-
-    await Transaction.create({
-      user,
-      asset,
-      amount: amount.toString(),
-      type: "withdraw",
-      txHash: event.log.transactionHash,
-      timestamp: Date.now(),
-    });
+  // Withdraw
+  contract.on("Withdrawn", (user, asset, amount, event) => {
+    saveTransaction(event, "withdraw");
   });
 
-  contract.on("Borrowed", async (user, asset, amount, event) => {
-    console.log("Borrow detected");
-
-    await Transaction.create({
-      user,
-      asset,
-      amount: amount.toString(),
-      type: "borrow",
-      txHash: event.log.transactionHash,
-      timestamp: Date.now(),
-    });
+  // Borrow
+  contract.on("Borrowed", (user, asset, amount, event) => {
+    saveTransaction(event, "borrow");
+    updateUserDebtStatus(user, true, asset);
   });
 
-  contract.on("Repaid", async (user, asset, amount, event) => {
-    console.log("Repay detected");
-
-    await Transaction.create({
-      user,
-      asset,
-      amount: amount.toString(),
-      type: "repay",
-      txHash: event.log.transactionHash,
-      timestamp: Date.now(),
-    });
+  // Repay // still want to fix repay to check if they have fully paid all there debts then mark hasdebt as false
+  contract.on("Repaid", (user, asset, amount, event) => {
+    saveTransaction(event, "repay");
   });
 
+  // Liquidation
   contract.on(
     "Liquidated",
-    async (user, debtAsset, collateralAsset, amount, event) => {
-      console.log("Liquidation detected");
-
-      await Transaction.create({
-        user,
+    (user, debtAsset, collateralAsset, amount, event) => {
+      saveTransaction(event, "liquidate", {
+        debtAsset,
+        collateralAsset,
         asset: collateralAsset,
-        amount: amount.toString(),
-        type: "liquidate",
-        txHash: event.log.transactionHash,
-        timestamp: Date.now(),
       });
     },
   );
+
+  console.log("Listening to all events...");
 }
 
 module.exports = startListener;

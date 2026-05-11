@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-// what is a module
 
 const transactionSchema = new mongoose.Schema({
   user: String,

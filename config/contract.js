@@ -10,6 +10,7 @@ const abi = [
   "function getTotalDebt(address user) view returns (uint256)",
   "function getTotalCollateral(address user) view returns (uint256)",
   "function calculateHealthFactor(address user) view returns(uint256)",
+  "function isLiquidatable(address user) public view returns (bool)",
   "function liquidate(address user, address debtAsset, address collateralAsset, uint256 repayAmount)",
   "event Deposited(address indexed user, address indexed asset, uint256 amount)",
   "event Withdrawn(address indexed user, address indexed asset, uint256 amount)",

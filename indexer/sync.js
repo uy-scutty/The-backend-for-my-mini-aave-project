@@ -40,8 +40,11 @@ async function syncAllEvents() {
   const borrows = await contract.queryFilter("Borrowed", 0, "latest");
   for (const event of borrows) {
     await saveEvent(event, "borrow");
-  }
 
+    const user = event.args.user;
+    await updateUserDebtStatus(user, true);
+  }
+  // NEEED TO SYNC REPAY TOO
   // REPAY
   const repays = await contract.queryFilter("Repaid", 0, "latest");
   for (const event of repays) {
