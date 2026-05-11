@@ -1,6 +1,9 @@
 const contract = require("../config/contract");
 const Transaction = require("../models/transaction");
 const UserPosition = require("../models/userPosition");
+const {
+  updateUserDebtStatus,
+} = require("../services/utils/updateUserPosition");
 
 // Simple helper function
 async function saveTransaction(event, type, extra = {}) {
@@ -17,25 +20,13 @@ async function saveTransaction(event, type, extra = {}) {
       ...extra,
     });
 
-    console.log(`✅ ${type} saved`);
+    console.log(`${type} saved`);
   } catch (error) {
     if (error.code === 11000) {
       console.log("Duplicate skipped");
     } else {
       console.error(error?.error);
     }
-  }
-}
-
-async function updateUserDebtStatus(userAddress, hasDebt, debtAsset) {
-  try {
-    await UserPosition.findOneAndUpdate(
-      { userAddress: userAddress.toLowerCase() },
-      { hasActiveDebt: hasDebt, debtAsset: debtAsset, lastChecked: Date.now() },
-      { upsert: true },
-    );
-  } catch (error) {
-    console.error("Error updating user debt status: ", error.message);
   }
 }
 
@@ -62,6 +53,7 @@ function startListener() {
   // Repay // still want to fix repay to check if they have fully paid all there debts then mark hasdebt as false
   contract.on("Repaid", (user, asset, amount, event) => {
     saveTransaction(event, "repay");
+    updateUserDebtStatus(user, null, asset);
   });
 
   // Liquidation
@@ -73,6 +65,7 @@ function startListener() {
         collateralAsset,
         asset: collateralAsset,
       });
+      updateUserDebtStatus(user, null, debtAsset);
     },
   );
 

@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const positionSchema = new mongoose.Schema({
+const userPositionSchema = new mongoose.Schema({
   useraAddress: {
     type: string,
     require: true,
@@ -12,10 +12,6 @@ const positionSchema = new mongoose.Schema({
     default: false,
   },
   debtAsset,
-  lastBorrowTimestamp: {
-    type: Date,
-    default: null,
-  },
   lastChecked: {
     type: Date,
     default: Date.now,
