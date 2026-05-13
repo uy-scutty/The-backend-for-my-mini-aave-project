@@ -1,9 +1,7 @@
 const contract = require("../config/contract");
 const Transaction = require("../models/transaction");
 const UserPosition = require("../models/userPosition");
-const {
-  updateUserDebtStatus,
-} = require("../services/utils/updateUserPosition");
+const { updateUserDebtStatus } = require("../utils/updateUserPosition");
 
 // Simple helper function
 async function saveTransaction(event, type, extra = {}) {
@@ -37,6 +35,7 @@ function startListener() {
   // Deposit
   contract.on("Deposited", (user, asset, amount, event) => {
     saveTransaction(event, "deposit");
+    updateUserDebtStatus(user, null, null, asset);
   });
 
   // Withdraw
@@ -47,13 +46,13 @@ function startListener() {
   // Borrow
   contract.on("Borrowed", (user, asset, amount, event) => {
     saveTransaction(event, "borrow");
-    updateUserDebtStatus(user, true, asset);
+    updateUserDebtStatus(user, true, asset, null);
   });
 
-  // Repay // still want to fix repay to check if they have fully paid all there debts then mark hasdebt as false
+  //Repay
   contract.on("Repaid", (user, asset, amount, event) => {
     saveTransaction(event, "repay");
-    updateUserDebtStatus(user, null, asset);
+    updateUserDebtStatus(user, null, null, null);
   });
 
   // Liquidation
@@ -65,11 +64,11 @@ function startListener() {
         collateralAsset,
         asset: collateralAsset,
       });
-      updateUserDebtStatus(user, null, debtAsset);
+      updateUserDebtStatus(user, null, debtAsset, collateralAsset);
     },
   );
 
   console.log("Listening to all events...");
 }
 
-module.exports = startListener;
+module.exports = { startListener };

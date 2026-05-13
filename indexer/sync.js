@@ -1,8 +1,6 @@
 const contract = require("../config/contract");
 const Transaction = require("../models/transaction");
-const {
-  updateUserDebtStatus,
-} = require("../services/utils/updateUserPosition");
+const { updateUserDebtStatus } = require("../utils/updateUserPosition");
 
 async function saveEvent(event, type, extra = {}) {
   const { user, asset, amount } = event.args;
@@ -31,6 +29,9 @@ async function syncAllEvents() {
   const deposits = await contract.queryFilter("Deposited", 0, "latest");
   for (const event of deposits) {
     await saveEvent(event, "deposit");
+
+    const { user, asset } = events.args;
+    await updateUserDebtStatus(user, null, null, asset);
   }
 
   // WITHDRAW
@@ -45,7 +46,7 @@ async function syncAllEvents() {
     await saveEvent(event, "borrow");
 
     const { user, asset } = event.args;
-    await updateUserDebtStatus(user, true, asset);
+    await updateUserDebtStatus(user, true, asset, null);
   }
 
   const repays = await contract.queryFilter("Repaid", 0, "latest");
@@ -53,7 +54,7 @@ async function syncAllEvents() {
     await saveEvent(event, "repay");
 
     const { user, asset } = event.args;
-    await updateUserDebtStatus(user, null, asset);
+    await updateUserDebtStatus(user, null, null, null);
   }
 
   // LIQUIDATION
@@ -67,10 +68,10 @@ async function syncAllEvents() {
     });
 
     const { user, debtAsset } = event.args;
-    await updateUserDebtStatus(user, null, debtAsset);
+    await updateUserDebtStatus(user, null, debtAsset, collateralAsset);
   }
 
   console.log("Sync Complete");
 }
 
-module.exports = syncAllEvents;
+module.exports = { syncAllEvents };
